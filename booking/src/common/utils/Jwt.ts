@@ -11,7 +11,7 @@ class JwtHandler {
         role
       },
       config.JWTKey,
-      { expiresIn: '1h' }
+      { expiresIn: '30d' }
     );
 
     return accessToken;
@@ -47,7 +47,7 @@ class JwtHandler {
         email
       },
       config.JWTKey,
-      { expiresIn: '5m' }
+      { expiresIn: '15m' }
     );
 
     return emailToken;

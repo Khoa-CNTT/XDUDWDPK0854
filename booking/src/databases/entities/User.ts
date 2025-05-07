@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
+      enum: ["user", "admin", "owner"],
       default: "user",
     },
     password: {
@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema(
     },
     dob: {
       type: Date,
+    },
+    avatarUrl:{
+      type: String,
     },
     state: {
       type: String,
@@ -56,6 +59,7 @@ export interface UserAttrs {
   state: State;
   gender: Gender;
   dob: Date;
+  avatarUrl: string;
 }
 
 userSchema.statics.build = (attrs: UserAttrs) => {
@@ -70,6 +74,7 @@ export interface userDoc extends mongoose.Document {
   state: State;
   gender: Gender;
   dob: Date;
+  avatarUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }

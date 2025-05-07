@@ -57,17 +57,30 @@ class ConfigService {
     return this.getEnv('MONGO_URL');
   }
 
-
   get apiUrl(): string {
     return this.getEnv('API_URL');
   }
   
-  // get STRIPE_SECRET(): string {
-  //   return this.getEnv('STRIPE_SECRET');
-  // }
-  // get pointSecret(): string {
-  //   return this.getEnv('ENDPOINT_SECRET');
-  // }
+  get stripeSecret(): string {
+    return this.getEnv('STRIPE_SECRET');
+  }
+  get pointSecret(): string {
+    return this.getEnv('ENDPOINT_SECRET');
+  }
+
+  get striptAccountReturnUrl(): string {
+    return this.getEnv('STRIPE_ACCOUNT_RETURN_URL');
+  }
+
+  get deepSeekApiKey(): string {
+    return this.getEnv('DEEP_SEEK_API_KEY');
+  }
+  
+  
+  get grokApiKey(): string {
+    return this.getEnv('GROK_API_KEY');
+  }
+
 }
 const config = new ConfigService();
 export default config;
