@@ -14,7 +14,7 @@ const getSendMaiInfo = (
   const params = encodeURIComponent(Jwt.generateVerifyEmailToken(email));
   switch (purpose) {
     case "verify": {
-      const verifyLink = `${config.apiUrl}/api/auth/verify/${params}`;
+      const verifyLink = `${config.apiUrl}/api/v1/user/verify/${params}`;
       return { verifyLink, action: "Verify Email" };
     }
     case "resetPassword": {

@@ -1,4 +1,4 @@
-import { Request, NextFunction, Response } from "express";
+import { NextFunction } from "express";
 
 import { RequestCustom, ResponseCustom } from "../interfaces/express";
 import ForbiddenException from "../exception/ForbiddenException";
@@ -11,6 +11,6 @@ export const adminMiddleware = async (
   if (req.userInfo.role === "admin") {
     return next();
   }
-  throw new ForbiddenException({ errorCode: ErrorCode.ADMIN_ISNT, errorMessage: "Permission Error" })
+  throw new ForbiddenException({ errorCode: ErrorCode.ADMIN_ISNT, errorMessage: "Bạn không đủ quyền truy cập" })
 
 };

@@ -1,3 +1,4 @@
+
 import { validationResult } from "express-validator";
 import { HttpStatusCode } from "@/common/constants";
 import { NextFunction, Request } from "express";
@@ -9,6 +10,8 @@ import Jwt from "@/common/utils/Jwt";
 import ErrorCode from "@/common/constants/errorCode";
 import config from "@/common/config/config";
 import hashing from "@/common/utils/hashing";
+import ServerInternalException from "@/common/exception/ServerInternalExeption";
+
 class UserController {
   async register(
     request: Request,
@@ -18,37 +21,50 @@ class UserController {
     try {
       const errors = validationResult(request);
       if (!errors.isEmpty()) throw new BadRequestException(errors.array());
-      const { fullName, email, password} = request.body;
+      const { fullName, email, password } = request.body;
+
       const user = await userService.register(
         fullName,
         email,
         password,
       );
       return sendVerifyLink(response, user.email, "verify");
+
     } catch (error) {
       next(error);
     }
   }
 
-  async loginGoogle(request: RequestCustom,
+  async loginGoogle(
+    request: RequestCustom,
     response: ResponseCustom,
-    next: NextFunction) {
-    const { name, email } = request.data as { name: string, email: string };
+    next: NextFunction
+  ) {
+    const { name, email, picture } = request.data as {
+      name: string;
+      email: string;
+      picture: string;
+    };
     try {
       const userExist = await userService.findUserByEmail(email);
       if (!userExist) {
-        const user = await userService.createActiveUser(
-          name,
-          email,
-        );
+        const user = await userService.createActiveUser(name, email, picture);
         return response.status(HttpStatusCode.OK).json({
           httpStatusCode: HttpStatusCode.OK,
-          data: { accessToken: Jwt.generateAccessToken(user.id, user.role), refreshToken: Jwt.generateRefreshToken(user.id) },
+          data: {
+            accessToken: Jwt.generateAccessToken(user.id, user.role),
+            refreshToken: Jwt.generateRefreshToken(user.id),
+            user,
+          },
         });
       }
       return response.status(HttpStatusCode.OK).json({
         httpStatusCode: HttpStatusCode.OK,
-        data: { accessToken: Jwt.generateAccessToken(userExist.id, userExist.role), refreshToken: Jwt.generateRefreshToken(userExist.id) },
+        data: {
+          accessToken: Jwt.generateAccessToken(userExist.id, userExist.role),
+          refreshToken: Jwt.generateRefreshToken(userExist.id),
+          user: userExist,
+        },
       });
     } catch (error) {
       next(error);
@@ -65,14 +81,14 @@ class UserController {
       if (!encryptEmail) {
         throw new BadRequestException({
           errorCode: ErrorCode.FAILED_VALIDATE_BODY,
-          errorMessage: "Invalid verification",
+          errorMessage: 'Lỗi xác thực',
         });
       }
       await userService.verifyEmail(encryptEmail);
       console.log(config.verifyReturnUrl);
       response.redirect(config.verifyReturnUrl as string);
     } catch (error: any) {
-      if (error.name === "TokenExpiredError")
+      if (error.name === 'TokenExpiredError')
         console.log(config.verifyExpiredUrl);
       response.redirect(config.verifyExpiredUrl as string);
     }
@@ -88,17 +104,17 @@ class UserController {
       if (!email) {
         throw new BadRequestException({
           errorCode: ErrorCode.FAILED_VALIDATE_BODY,
-          errorMessage: "Email is required",
+          errorMessage: 'Email là bắt buộc',
         });
       }
       const userExist = await userService.findUserByEmail(email);
-      if (!userExist || userExist.state === "active") {
+      if (!userExist || userExist.state === 'active') {
         throw new BadRequestException({
           errorCode: ErrorCode.NOT_FOUND,
-          errorMessage: "Not found unverify user",
+          errorMessage: 'Không tìm thấy người dùng chưa xác thực',
         });
       }
-      sendVerifyLink(response, email, "verify");
+      sendVerifyLink(response, email, 'verify');
     } catch (error) {
       next(error);
     }
@@ -109,13 +125,13 @@ class UserController {
       const { email, password } = request.body;
       const error = validationResult(request);
       if (!error.isEmpty()) throw new BadRequestException(error.array());
-      const { accessToken, refreshToken } = await userService.login(
+      const { accessToken, refreshToken, user } = await userService.login(
         email,
         password
       );
       return response.status(HttpStatusCode.OK).json({
         httpStatusCode: HttpStatusCode.OK,
-        data: { accessToken, refreshToken },
+        data: { accessToken, refreshToken, user },
       });
     } catch (error) {
       next(error);
@@ -132,8 +148,9 @@ class UserController {
       if (!user)
         throw new BadRequestException({
           errorCode: ErrorCode.NOT_FOUND,
-          errorMessage: "User not found",
+          errorMessage: 'Không tìm thấy người dùng',
         });
+
       const {
         email,
         fullName,
@@ -141,7 +158,9 @@ class UserController {
         state,
         dob,
         gender,
+        avatarUrl,
       } = user;
+
       const data = {
         email,
         fullName,
@@ -149,6 +168,7 @@ class UserController {
         gender,
         role,
         state,
+        avatarUrl
       };
       return response
         .status(HttpStatusCode.OK)
@@ -171,13 +191,13 @@ class UserController {
       if (!userExist) {
         throw new BadRequestException({
           errorCode: ErrorCode.NOT_FOUND,
-          errorMessage: "Not found user",
+          errorMessage: 'Không tìm thấy người dùng',
         });
       }
       sendVerifyLink(
         response,
         email,
-        "resetPassword",
+        'resetPassword',
         config.forgotPasswordReturnUrl
       );
     } catch (error) {
@@ -201,13 +221,13 @@ class UserController {
         httpStatusCode: HttpStatusCode.OK,
       });
     } catch (error: any) {
-      if (error.name === "TokenExpiredError") {
+      if (error.name === 'TokenExpiredError') {
         return response.status(HttpStatusCode.BAD_REQUEST).json({
           httpStatusCode: HttpStatusCode.BAD_REQUEST,
           errors: [
             {
               errorCode: ErrorCode.TOKEN_EXPIRED,
-              errorMessage: "Your token is expired",
+              errorMessage: 'Token của bạn đã hết hạn',
             },
           ],
         });
@@ -227,7 +247,7 @@ class UserController {
       if (!userExist) {
         throw new BadRequestException({
           errorCode: ErrorCode.NOT_FOUND,
-          errorMessage: "Not found user",
+          errorMessage: 'Không tìm thấy người dùng',
         });
       }
       const accessToken = Jwt.generateAccessToken(userExist.id, userExist.role);
@@ -250,14 +270,14 @@ class UserController {
       if (!newPassword) {
         throw new BadRequestException({
           errorCode: ErrorCode.FAILED_VALIDATE_BODY,
-          errorMessage: "New password is require",
+          errorMessage: 'Mật khẩu mới là bắt buộc',
         });
       }
       const userExist = await userService.findUserById(uid);
       if (!userExist) {
         throw new BadRequestException({
           errorCode: ErrorCode.NOT_FOUND,
-          errorMessage: "Not found user",
+          errorMessage: 'Không tìm thấy người dùng',
         });
       }
       const isPasswordMatch = await hashing.comparePassword(
@@ -267,7 +287,7 @@ class UserController {
       if (!isPasswordMatch) {
         throw new BadRequestException({
           errorCode: ErrorCode.NOT_FOUND,
-          errorMessage: "Old password is wrong",
+          errorMessage: 'Mật khẩu cũ không đúng',
         });
       }
 
@@ -297,15 +317,36 @@ class UserController {
     }
   }
 
-  // admin method
-  async blockUsers(
+  async updateProfile(
     request: RequestCustom,
     response: ResponseCustom,
     next: NextFunction
   ) {
     try {
-      const { uids } = request.body;
-      await userService.blockUsers(uids);
+      const { uid } = request.userInfo;
+      const data = await userService.updateUser(uid, request.body);
+      return response
+        .status(HttpStatusCode.OK)
+        .json({ httpStatusCode: HttpStatusCode.OK, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
+  async changeAvatar(
+    request: RequestCustom,
+    response: ResponseCustom,
+    next: NextFunction
+  ) {
+    try {
+      if (!request.file) {
+        throw new ServerInternalException({ errorCode: ErrorCode.UPLOAD_ERROR, errorMessage: "Error when upload image" });
+      }
+      const { uid } = request.userInfo;
+      const avatarUrl = request.file.path;
+      console.log(avatarUrl)
+      await userService.updateAvatar(uid, avatarUrl);
       return response
         .status(HttpStatusCode.OK)
         .json({ httpStatusCode: HttpStatusCode.OK });
@@ -313,26 +354,5 @@ class UserController {
       next(error);
     }
   }
-
-  async unblockUsers(
-    request: RequestCustom,
-    response: ResponseCustom,
-    next: NextFunction
-  ) {
-    try {
-      const { uids } = request.body;
-      await userService.unblockUsers(uids);
-      return response
-        .status(HttpStatusCode.OK)
-        .json({ httpStatusCode: HttpStatusCode.OK });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-
-
- 
- 
 }
 export default new UserController();

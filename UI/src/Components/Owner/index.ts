@@ -1,0 +1,7 @@
+export * from './uploadFile'
+export * from './hotelDetail/hotelInfo'
+export * from './hotelDetail/listRooms'
+export * from './siderBarItems'
+export * from './listHotels'
+export * from './statistic'
+export * from './addressGuide'
